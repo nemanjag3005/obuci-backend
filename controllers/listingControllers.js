@@ -1,5 +1,6 @@
 import asyncHandler from "express-async-handler";
 import Listing from "../models/listingModel.js";
+import User from "../models/userModel.js";
 
 // @desc Gets all listings
 // @route GET /api/listings
@@ -15,12 +16,14 @@ export const getListings = asyncHandler(async (req, res) => {
 // @access Private
 
 export const createListing = asyncHandler(async (req, res) => {
-  if (!req.body.title) {
+  if (!req.body.title || !req.body.description) {
     res.status(400);
     throw new Error("Please add a text field.");
   }
   const listing = await Listing.create({
     title: req.body.title,
+    user: req.user.id,
+    description: req.body.description,
   });
   res.status(200).json(listing);
 });
@@ -35,6 +38,20 @@ export const updateListing = asyncHandler(async (req, res) => {
   if (!listing) {
     res.status(400);
     throw new Error("Oglas nije nadjen.");
+  }
+
+  const user = await User.findById(req.user.id);
+
+  // Check for user
+  if (!user) {
+    res.status(401);
+    throw new Error("User not found");
+  }
+
+  // Make sure the logged in user matches the listing user
+  if (listing.user.toString() !== user.id) {
+    res.status(401);
+    throw new Error("User not authrized");
   }
 
   const updatedListing = await Listing.findByIdAndUpdate(
@@ -55,6 +72,20 @@ export const deleteListing = asyncHandler(async (req, res) => {
   if (!listing) {
     res.status(400);
     throw new Error("Oglas nije nadjen.");
+  }
+
+  const user = await User.findById(req.user.id);
+
+  // Check for user
+  if (!user) {
+    res.status(401);
+    throw new Error("User not found");
+  }
+
+  // Make sure the logged in user matches the listing user
+  if (listing.user.toString() !== user.id) {
+    res.status(401);
+    throw new Error("User not authrized");
   }
 
   await listing.remove();
